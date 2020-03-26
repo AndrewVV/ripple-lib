@@ -1,7 +1,6 @@
 require('dotenv').config();
 const bip39 = require("bip39");
 const bip32 = require("ripple-bip32");
-const ripple = require('ripple-keypairs')
 const RippleAPI = require('ripple-lib').RippleAPI;
 // const RIPPLE_PROVIDER = 'wss://s1.ripple.com'; // Production ripple provider
 const RIPPLE_PROVIDER = 'wss://s.altnet.rippletest.net:51233'; // // Developmnet ripple provider
@@ -14,12 +13,15 @@ class RippleLib{
     constructor(provider){
         this.api = new RippleAPI({ server: provider });
         // for test
-        // this.generateAddress()
+        this.generateAddress()
         // this.mnemonicToAddress(mnemonic)
         // this.getBalance(myTestAddress)
         // this.getAccountInfo(myTestAddress)
-        // this.sendTx('r9LinkU2BtReewBoeNURJC3bd5oHonifWc', 1.123, 0.000012);
+        // this.sendTx('r9LinkU2BtReewBoeNURJC3bd5oHonifWc', 1.987, 0.000012);
         // this.sendTx(myTestAddress, 0.1);
+        // this.getTxHistory(myTestAddress)
+        // this.validatorAddress(myTestAddress)
+        // this.validatorSecret(myTestSecret)
     }
     // get balance in XRP
     async getBalance(address){
@@ -40,13 +42,13 @@ class RippleLib{
             const address = myTestAddress;
             const secret = myTestSecret;
             let sequence = await this.getAccountInfo(address)
-            let tx = {
+            const tx = {
                 TransactionType: 'Payment',
                 Account: address,
-                Fee : (fee * 1000 * 1000) + '',
+                Fee : this.api.xrpToDrops(fee),
                 Destination: to,
                 DestinationTag : 2,
-                Amount: (amount * 1000 * 1000) + '',
+                Amount: this.api.xrpToDrops(amount),
                 Sequence: sequence.sequence
             }
             let txJSON = JSON.stringify(tx)
@@ -66,6 +68,66 @@ class RippleLib{
         } catch (error) {
             console.log(error)
         }
+    }
+
+    async getTxHistory(address){
+        try {
+            await this.api.connect();
+            let result = [];
+            const allTx = await this.api.getTransactions(address, {limit: 5})
+            const rate = "0.16";
+            for(let txKey in allTx){
+                let tx = allTx[txKey];
+                if(tx.outcome.deliveredAmount.currency === "XRP"){
+                    let timeStamp = tx.outcome.timestamp;
+                    timeStamp = Date.parse(timeStamp)/1000;
+                    let hash = tx.id;
+                    let memo = tx.memo;
+                    let txFee = tx.outcome.fee;
+                    const amount = tx.outcome.deliveredAmount.value;
+                    const from = tx.specification.source.address;
+                    const to = tx.specification.destination.address;
+                    let status;
+                    if(tx.outcome.result === 'tesSUCCESS') status = "CONFIRM";
+                    let action;
+                    if(to != from){
+                        if(address == to){
+                            action = "DEPOSIT";
+                        }else if(address == from){
+                            action = "SEND";
+                        }
+                    }else{
+                        action = "SELF";
+                    }
+                    let moneyQuantity = (amount*rate).toFixed(2); 
+                    let id = result.length+1;
+                    let txData = this.formatTxData(timeStamp, id, action, status, amount, moneyQuantity, hash, from, to, txFee, memo);
+                    result.push(txData);
+                } continue;
+            }
+            console.log(result)
+            return result;
+        } catch (error) {
+            console.log(error)
+        }
+    }
+
+    formatTxData(timeStamp, id, action, status, amount, moneyQuantity, hash, from, to, txFee, memo){
+		let txData = {
+            timeStamp,
+            id,
+            action,
+            status,
+            cryptoAmount: amount,
+            moneyQuantity,
+            copy: hash,
+            explorer: `https://test.bithomp.com/explorer/${hash}`,
+            fromAddress: from,
+            toAddress: to,
+            txFee, 
+			memo,
+		};
+		return txData;
     }
 
     async getAccountInfo(address){
@@ -88,14 +150,45 @@ class RippleLib{
             console.log(error)
         }
     }
+    // get transaction fee in protocol
+    async getFee(){
+        try {
+            await this.api.connect();
+            const fee = await this.api.getFee();
+            return fee;
+        } catch (error) {
+            console.log(error)
+        }
+    }
+    // address is valid or not. return boolean
+    validatorAddress(address){
+        try {
+            const result = this.api.isValidAddress(address);
+            console.log(result)
+            return result;
+        } catch (error) {
+            console.log(error)
+        }
+    }
+
+    validatorSecret(secret){
+        try {
+            const result = this.api.isValidSecret(secret);
+            console.log(result)
+            return result;
+        } catch (error) {
+            console.log(error)
+        }
+    }
 
     async mnemonicToAddress(mnemonic){
         try {
             const seed = await bip39.mnemonicToSeed(mnemonic)
             const m = bip32.fromSeedBuffer(seed)
             const keyPair = m.derivePath("m/44'/144'/0'/0/0").keyPair.getKeyPairs()
-            const address = ripple.deriveAddress(keyPair.publicKey)
-            // console.log('privateKey: ' + keyPair.privateKey)
+            console.log('publicKey: ' + keyPair.publicKey)
+            console.log('privateKey: ' + keyPair.privateKey)
+            const address = this.api.deriveAddress(keyPair.publicKey)
             console.log('address: ' + address)
             return address;
         } catch (error) {
