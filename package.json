@@ -1,0 +1,27 @@
+{
+  "name": "ripple-lib",
+  "version": "1.0.0",
+  "description": "first experiment with Ripple (XRP)",
+  "main": "RippleLib.js",
+  "scripts": {
+    "start": "node RippleLib.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AndrewVV/ripple-lib.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/AndrewVV/ripple-lib/issues"
+  },
+  "homepage": "https://github.com/AndrewVV/ripple-lib#readme",
+  "dependencies": {
+    "bip39": "^3.0.2",
+    "dotenv": "^8.2.0",
+    "ripple-bip32": "0.0.3",
+    "ripple-keypairs": "^1.0.0",
+    "ripple-lib": "^1.6.4"
+  }
+}
