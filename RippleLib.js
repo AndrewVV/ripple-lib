@@ -13,11 +13,11 @@ class RippleLib{
     constructor(provider){
         this.api = new RippleAPI({ server: provider });
         // for test
-        this.generateAddress()
+        // this.generateAddress()
         // this.mnemonicToAddress(mnemonic)
-        // this.getBalance(myTestAddress)
+        this.getBalance(myTestAddress)
         // this.getAccountInfo(myTestAddress)
-        // this.sendTx('r9LinkU2BtReewBoeNURJC3bd5oHonifWc', 1.987, 0.000012);
+        // this.sendTx('r9LinkU2BtReewBoeNURJC3bd5oHonifWc', 252.123, 0.000012, 9560231);
         // this.sendTx(myTestAddress, 0.1);
         // this.getTxHistory(myTestAddress)
         // this.validatorAddress(myTestAddress)
@@ -36,7 +36,7 @@ class RippleLib{
         }
     }
 
-    async sendTx(to, amount, fee){
+    async sendTx(to, amount, fee, memo){
         try {
             await this.api.connect();
             const address = myTestAddress;
@@ -47,7 +47,7 @@ class RippleLib{
                 Account: address,
                 Fee : this.api.xrpToDrops(fee),
                 Destination: to,
-                DestinationTag : 2,
+                DestinationTag : memo,
                 Amount: this.api.xrpToDrops(amount),
                 Sequence: sequence.sequence
             }
@@ -65,6 +65,7 @@ class RippleLib{
                 const hash = result.tx_json.hash;
                 return hash;
             }
+            await this.api.disconnect();
         } catch (error) {
             console.log(error)
         }
@@ -82,7 +83,7 @@ class RippleLib{
                     let timeStamp = tx.outcome.timestamp;
                     timeStamp = Date.parse(timeStamp)/1000;
                     let hash = tx.id;
-                    let memo = tx.memo;
+                    let memo = tx.specification.destination.tag;
                     let txFee = tx.outcome.fee;
                     const amount = tx.outcome.deliveredAmount.value;
                     const from = tx.specification.source.address;
