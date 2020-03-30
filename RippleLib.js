@@ -17,7 +17,7 @@ class RippleLib{
         // this.mnemonicToAddress(mnemonic)
         this.getBalance(myTestAddress)
         // this.getAccountInfo(myTestAddress)
-        // this.sendTx('r9LinkU2BtReewBoeNURJC3bd5oHonifWc', 252.123, 0.000012, 9560231);
+        // this.sendTx('r9LinkU2BtReewBoeNURJC3bd5oHonifWc', 2.123, 0.000012, "12345");
         // this.sendTx(myTestAddress, 0.1);
         // this.getTxHistory(myTestAddress)
         // this.validatorAddress(myTestAddress)
@@ -29,8 +29,9 @@ class RippleLib{
             await this.api.connect();
             const result = await this.api.getBalances(address);
             await this.api.disconnect();
-            console.log(result)
-            return result[0].value;
+            const balance = result[0].value;
+            console.log(balance)
+            return balance;
         } catch (error) {
             console.log(error)
         }
@@ -47,7 +48,7 @@ class RippleLib{
                 Account: address,
                 Fee : this.api.xrpToDrops(fee),
                 Destination: to,
-                DestinationTag : memo,
+                DestinationTag : Number(memo),
                 Amount: this.api.xrpToDrops(amount),
                 Sequence: sequence.sequence
             }
@@ -79,31 +80,32 @@ class RippleLib{
             const rate = "0.16";
             for(let txKey in allTx){
                 let tx = allTx[txKey];
-                if(tx.outcome.deliveredAmount.currency === "XRP"){
-                    let timeStamp = tx.outcome.timestamp;
-                    timeStamp = Date.parse(timeStamp)/1000;
-                    let hash = tx.id;
-                    let memo = tx.specification.destination.tag;
-                    let txFee = tx.outcome.fee;
-                    const amount = tx.outcome.deliveredAmount.value;
-                    const from = tx.specification.source.address;
-                    const to = tx.specification.destination.address;
-                    let status;
-                    if(tx.outcome.result === 'tesSUCCESS') status = "CONFIRM";
-                    let action;
-                    if(to != from){
-                        if(address == to){
-                            action = "DEPOSIT";
-                        }else if(address == from){
-                            action = "SEND";
+                if (tx.outcome.result === 'tesSUCCESS') {
+                    if(tx.outcome.deliveredAmount.currency === "XRP"){
+                        let timeStamp = tx.outcome.timestamp;
+                        timeStamp = Date.parse(timeStamp)/1000;
+                        const hash = tx.id;
+                        const memo = tx.specification.destination.tag;
+                        const txFee = tx.outcome.fee;
+                        const amount = tx.outcome.deliveredAmount.value;
+                        const from = tx.specification.source.address;
+                        const to = tx.specification.destination.address;
+                        const status = "CONFIRM";
+                        let action;
+                        if(to != from){
+                            if(address == to){
+                                action = "DEPOSIT";
+                            }else if(address == from){
+                                action = "SEND";
+                            }
+                        }else{
+                            action = "SELF";
                         }
-                    }else{
-                        action = "SELF";
-                    }
-                    let moneyQuantity = (amount*rate).toFixed(2); 
-                    let id = result.length+1;
-                    let txData = this.formatTxData(timeStamp, id, action, status, amount, moneyQuantity, hash, from, to, txFee, memo);
-                    result.push(txData);
+                        const moneyQuantity = (amount*rate).toFixed(2); 
+                        const id = result.length+1;
+                        const txData = this.formatTxData(timeStamp, id, action, status, amount, moneyQuantity, hash, from, to, txFee, memo);
+                        result.push(txData);
+                    } continue;
                 } continue;
             }
             console.log(result)
